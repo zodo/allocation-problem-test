@@ -1,10 +1,10 @@
 import scala.collection.mutable.ArrayBuffer
 
 object Solver {
-  def apply(reallocationResistance: Int) = new Solver(reallocationResistance)
+  def apply(reallocationResistance: Double) = new Solver(reallocationResistance)
 }
 
-class Solver(private val reallocationResistance: Int, val Subjects : ArrayBuffer[Subject] = new ArrayBuffer[Subject]()){
+class Solver(private val reallocationResistance: Double, val Subjects : ArrayBuffer[Subject] = new ArrayBuffer[Subject]()){
   var Allocations : List[Allocation] = List()
 
   def addSubject(subject: Subject): Unit = {
@@ -15,10 +15,9 @@ class Solver(private val reallocationResistance: Int, val Subjects : ArrayBuffer
   def removeSubject(subjectId: Int): Unit ={
     val subject = Subjects.find(subj => subj.Id == subjectId)
     subject match {
-      case Some(sub) => {
+      case Some(sub) =>
         Subjects -= sub
         Allocations = getIntellectualAllocation(Subjects.toList, Allocations)
-      }
       case None => throw new NoSuchElementException
     }
   }
@@ -56,9 +55,9 @@ class Solver(private val reallocationResistance: Int, val Subjects : ArrayBuffer
     val grouped = allocationsInWork.groupBy(_.Subject)
     val subjectsCount = conflictedSubjects.count(subj => !grouped.contains(subj))
 
-    val counts = grouped.map(_._2.length) ++ (1 until subjectsCount).map(x => 0)
+    val counts = grouped.map(_._2.length) ++ (0 until subjectsCount).map(x => 0)
 
-    val mean = counts.sum / counts.size
+    val mean = counts.sum.toDouble / counts.size
     val devs = counts.map(count => (count - mean) * (count - mean))
     val stddev = Math.sqrt(devs.sum / counts.size)
 
@@ -66,6 +65,7 @@ class Solver(private val reallocationResistance: Int, val Subjects : ArrayBuffer
     stddev - reallocationResistance * matchedAllocationsCount
   }
 
+  def printAllocations : Unit = println(Allocations)
 }
 
 
