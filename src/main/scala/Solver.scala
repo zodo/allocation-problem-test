@@ -1,7 +1,7 @@
 import scala.collection.mutable.ArrayBuffer
 
 object Solver {
-  def apply(reallocationResistance: Double) =
+  def apply(reallocationResistance: Double = 0.1) =
     new Solver(reallocationResistance)
 }
 
