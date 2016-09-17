@@ -1,1 +1,1 @@
-case class PossibleAllocation(Object: Int, Subjects: List[Subject])
+case class PossibleAllocation(obj: Int, subjects: List[Subject])

@@ -1,1 +1,1 @@
-case class Allocation(Object: Int, Subject: Subject)
+case class Allocation(obj: Int, subject: Subject)

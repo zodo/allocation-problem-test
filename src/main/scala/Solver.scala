@@ -1,71 +1,76 @@
 import scala.collection.mutable.ArrayBuffer
 
 object Solver {
-  def apply(reallocationResistance: Double) = new Solver(reallocationResistance)
+  def apply(reallocationResistance: Double) =
+    new Solver(reallocationResistance)
 }
 
-class Solver(private val reallocationResistance: Double, val Subjects : ArrayBuffer[Subject] = new ArrayBuffer[Subject]()){
-  var Allocations : List[Allocation] = List()
+class Solver(private val reallocationResistance: Double) {
+  val Subjects: ArrayBuffer[Subject] = new ArrayBuffer[Subject]()
+  var Allocations: List[Allocation] = List()
 
   def addSubject(subject: Subject): Unit = {
     Subjects += subject
-    Allocations = getIntellectualAllocation(Subjects.toList, Allocations)
+    Allocations = getFullyAllocations(Subjects.toList, Allocations)
   }
 
-  def removeSubject(subjectId: Int): Unit ={
-    val subject = Subjects.find(subj => subj.Id == subjectId)
+  def removeSubject(subjectId: Int): Unit = {
+    val subject = Subjects.find(subj => subj.id == subjectId)
     subject match {
       case Some(sub) =>
         Subjects -= sub
-        Allocations = getIntellectualAllocation(Subjects.toList, Allocations)
+        Allocations = getFullyAllocations(Subjects.toList, Allocations)
       case None => throw new NoSuchElementException
     }
   }
 
-  def getIntellectualAllocation(subjects: List[Subject], currentAllocation: List[Allocation]): List[Allocation] ={
-    val firstPriorityAllocations = getOptimalAllocations(subjects.filter(!_.LowPriority), currentAllocation.filter(!_.Subject.LowPriority))
+  def getFullyAllocations(subjects: List[Subject], currentAllocation: List[Allocation]): List[Allocation] = {
+    val firstPriorityAllocations = getOptimalAllocations(
+      subjects.filter(!_.lowPriority),
+      currentAllocation.filter(!_.subject.lowPriority))
 
-    firstPriorityAllocations ++ getOptimalAllocations(subjects.filter(_.LowPriority), currentAllocation.filter(_.Subject.LowPriority))
-        .filter(alloc => !firstPriorityAllocations.map(_.Object).contains(alloc.Object))
+    firstPriorityAllocations ++ getOptimalAllocations(
+      subjects.filter(_.lowPriority),
+      currentAllocation.filter(_.subject.lowPriority)).filter(alloc =>
+      !firstPriorityAllocations.map(_.obj).contains(alloc.obj))
   }
 
-  def getOptimalAllocations(subjects: List[Subject], currentAllocation: List[Allocation]): List[Allocation] ={
-    val objectsNeedToBeAssign = subjects.flatMap(_.AllowedObjects).distinct
+  def getOptimalAllocations(subjects: List[Subject], currentAllocation: List[Allocation]): List[Allocation] = {
 
-    val allPossibleAllocations = objectsNeedToBeAssign.map(obj => PossibleAllocation(obj, subjects.filter(subj => subj.AllowedObjects.contains(obj))))
-    val conflictedSubjects = allPossibleAllocations.filter(alloc => alloc.Subjects.length > 1).flatMap(alloc => alloc.Subjects).distinct
+    val objectsNeedToBeAssign = subjects.flatMap(_.allowedObjects).distinct
+    val allPossibleAllocations = objectsNeedToBeAssign.map(obj =>
+        PossibleAllocation(obj, subjects.filter(_.allowedObjects.contains(obj))))
 
-    optimize(List.empty[Allocation], allPossibleAllocations, currentAllocation, conflictedSubjects)
-  }
+    val conflictedSubjects = allPossibleAllocations
+      .filter(_.subjects.length > 1)
+      .flatMap(_.subjects)
+      .distinct
 
-  def optimize(allocationInWork: List[Allocation], possibleAllocations: List[PossibleAllocation],
-               previousAllocations: List[Allocation],conflictedSubjects: List[Subject]) : List[Allocation] = {
-    val firstPossibleAllocation = possibleAllocations.headOption
-    firstPossibleAllocation match {
-      case None => allocationInWork
-      case Some(alloc) => alloc.Subjects.map(subj =>
-        optimize(allocationInWork :+ Allocation(alloc.Object, subj),
-          possibleAllocations.drop(1), previousAllocations, conflictedSubjects))
-        .sortBy(al => getOptimality(al, conflictedSubjects, previousAllocations))
-        .head
+    def recursiveOptimize(allocations: List[Allocation], possibleAllocations: List[PossibleAllocation]): List[Allocation] = {
+        possibleAllocations.headOption match {
+        case None => allocations
+        case Some(allocation) =>
+          allocation.subjects
+            .map(subj => recursiveOptimize(allocations :+ Allocation(allocation.obj, subj), possibleAllocations.drop(1)))
+            .sortBy(getOptimality(_, conflictedSubjects, currentAllocation))
+            .head
+      }
     }
+    recursiveOptimize(List.empty[Allocation], allPossibleAllocations)
   }
 
   def getOptimality(allocationsInWork: List[Allocation], conflictedSubjects: List[Subject], previousAllocation: List[Allocation]): Double = {
-    val grouped = allocationsInWork.groupBy(_.Subject)
-    val subjectsCount = conflictedSubjects.count(subj => !grouped.contains(subj))
+    val grouped = allocationsInWork.groupBy(_.subject)
+    val unallocatedSubjectsCount = conflictedSubjects.count(subj => !grouped.contains(subj))
+    val allocationCounts = grouped.map(_._2.length) ++ (0 until unallocatedSubjectsCount).map(x => 0)
 
-    val counts = grouped.map(_._2.length) ++ (0 until subjectsCount).map(x => 0)
+    val mean = allocationCounts.sum.toDouble / allocationCounts.size
+    val stddev = Math.sqrt(allocationCounts.map(count => (count - mean) * (count - mean)).sum / allocationCounts.size)
 
-    val mean = counts.sum.toDouble / counts.size
-    val devs = counts.map(count => (count - mean) * (count - mean))
-    val stddev = Math.sqrt(devs.sum / counts.size)
-
-    val matchedAllocationsCount = allocationsInWork.intersect(previousAllocation).length
+    val matchedAllocationsCount =
+      allocationsInWork.intersect(previousAllocation).length
     stddev - reallocationResistance * matchedAllocationsCount
   }
 
-  def printAllocations : Unit = println(Allocations)
+  def printAllocations(): Unit = println(Allocations)
 }
-
-
