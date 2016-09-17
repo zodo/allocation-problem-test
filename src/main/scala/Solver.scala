@@ -41,20 +41,14 @@ class Solver(private val reallocationResistance: Double) {
     val allPossibleAllocations = objectsNeedToBeAssign.map(obj =>
         PossibleAllocation(obj, subjects.filter(_.allowedObjects.contains(obj))))
 
-    val conflictedSubjects = allPossibleAllocations
-      .filter(_.subjects.length > 1)
-      .flatMap(_.subjects)
-      .distinct
-
-    def recursiveOptimize(allocations: List[Allocation], possibleAllocations: List[PossibleAllocation]): List[Allocation] = {
-        possibleAllocations.headOption match {
-        case None => allocations
-        case Some(allocation) =>
-          allocation.subjects
-            .map(subj => recursiveOptimize(allocations :+ Allocation(allocation.obj, subj), possibleAllocations.drop(1)))
-            .sortBy(getOptimality(_, conflictedSubjects, currentAllocation))
-            .head
-      }
+    def recursiveOptimize(allocations: List[Allocation], possibleAllocations: List[PossibleAllocation]): List[Allocation] =
+      possibleAllocations.headOption match {
+      case None => allocations
+      case Some(allocation) =>
+        allocation.subjects
+          .map(subj => recursiveOptimize(allocations :+ Allocation(allocation.obj, subj), possibleAllocations.drop(1)))
+          .sortBy(getOptimality(_, subjects, currentAllocation))
+          .head
     }
     recursiveOptimize(List.empty[Allocation], allPossibleAllocations)
   }

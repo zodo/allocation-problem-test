@@ -27,11 +27,10 @@ class UnitTest extends FlatSpec with Matchers {
     val subject2 = subject1.copy(id = 2)
     var first = solver.getOptimality(List(Allocation(1, subject1), Allocation(2, subject2)), List(subject1, subject2), Nil)
     var second = solver.getOptimality(List(Allocation(1, subject1), Allocation(2, subject1)), List(subject1, subject2), Nil)
-    println(first + " " + second)
     first should be < second
   }
 
-  it should "ignore low priority subjects if can" in {
+  it should "ignore low priority subjects, if can" in {
     val solver = Solver()
     val subject1 = Subject(1, List(1, 2))
     val subject2 = subject1.copy(id = 2, lowPriority = true)
